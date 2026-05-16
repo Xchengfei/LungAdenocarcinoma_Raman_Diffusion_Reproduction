@@ -1,0 +1,48 @@
+﻿project:
+  seed: 42
+
+data:
+  processed_npz: data/processed/processed_spectra.npz
+  split_indices: data/splits/split_indices.json
+  split_dir: data/splits
+
+classes:
+  healthy: 0
+  lung_adenocarcinoma: 1
+
+model:
+  num_classes: 2
+  spectrum_length: null
+  reshape_to_2d: true
+  reshape_height: 32
+  reshape_width: 32
+  in_channels: 1
+  base_channels: 64
+  channel_multipliers: [1, 2, 4]
+  time_embed_dim: 256
+  label_embed_dim: 256
+  num_heads: 8
+  dropout: 0.1
+
+noise_schedule:
+  type: linear
+  timesteps: 1000
+  beta_start: 0.0001
+  beta_end: 0.02
+
+training:
+  epochs: 10000
+  batch_size: 32
+  learning_rate: 0.0001
+  save_every: 100
+  validate_every: 100
+  early_stopping_patience: null
+  checkpoint_dir: outputs/checkpoints/diffusion
+
+generation:
+  ratios: [0.5, 1.0, 2.0]
+  output_dir: outputs/generated
+  sampler: ddim
+  eta: 0.0
+  batch_size: 32
+  only_generate_for_train_classes: true

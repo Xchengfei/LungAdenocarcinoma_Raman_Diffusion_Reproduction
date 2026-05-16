@@ -1,0 +1,56 @@
+﻿project:
+  seed: 42
+
+data:
+  processed_npz: data/processed/processed_spectra.npz
+  split_indices: data/splits/split_indices.json
+  split_dir: data/splits
+  generated_dir: outputs/generated
+
+baseline_models:
+  svm:
+    enabled: true
+    kernel: rbf
+    probability: true
+  random_forest:
+    enabled: true
+    n_estimators: 300
+  mlp:
+    enabled: true
+    hidden_layers: [256, 128, 64]
+    dropout: 0.3
+  cnn1d:
+    enabled: true
+    channels: [32, 64, 128]
+    kernel_size: 7
+    dropout: 0.2
+
+training:
+  epochs: 100
+  batch_size: 32
+  learning_rate: 0.001
+  repeats: 5
+
+experiments:
+  - name: real_only
+    augmentation_ratio: 0.0
+  - name: diffusion_0_5x
+    augmentation_ratio: 0.5
+  - name: diffusion_1_0x
+    augmentation_ratio: 1.0
+  - name: diffusion_2_0x
+    augmentation_ratio: 2.0
+
+metrics:
+  - accuracy
+  - precision
+  - recall
+  - sensitivity
+  - specificity
+  - f1
+  - auc
+  - ece
+  - confusion_matrix
+
+outputs:
+  report_dir: outputs/reports

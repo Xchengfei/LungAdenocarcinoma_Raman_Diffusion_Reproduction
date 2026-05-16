@@ -1,0 +1,43 @@
+﻿project:
+  name: lung_adenocarcinoma_raman_diffusion
+  seed: 42
+
+classes:
+  healthy: 0
+  lung_adenocarcinoma: 1
+
+raw_data:
+  # 将原始 Excel 或 CSV 放入 data/raw 后在这里填写文件名。
+  path: data/raw/Raman_data.xlsx
+  format: excel
+  healthy_sheet: Healthy
+  cancer_sheet: Cancer
+  wavenumber_column: "Unnamed: 0"
+  orientation: columns_are_samples
+
+expected_counts:
+  healthy: 87
+  lung_adenocarcinoma: 93
+
+split:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  stratify: true
+
+preprocessing:
+  baseline_correction: iawpls
+  baseline_poly_order: 3
+  baseline_iterations: 100
+  baseline_tolerance: 0.001
+  baseline_smooth_window: 9
+  smoothing: savitzky_golay
+  smoothing_window: 9
+  smoothing_polyorder: 3
+  normalization: l2
+
+outputs:
+  interim_csv: data/interim/spectra_long_format.csv
+  processed_csv: data/processed/raman_spectra_preprocessed.csv
+  processed_npz: data/processed/processed_spectra.npz
+  split_indices: data/splits/split_indices.json
