@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -23,6 +24,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from utils.publication_figures import PALETTE, apply_publication_style, finalize_figure, style_axes as publication_style_axes
 
 
 LABEL_COLUMN = "label"
@@ -49,29 +54,11 @@ def project_root() -> Path:
 
 
 def configure_plot_style() -> None:
-    plt.rcParams.update(
-        {
-            "font.family": "serif",
-            "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
-            "font.size": 9,
-            "axes.titlesize": 10,
-            "axes.labelsize": 9,
-            "xtick.labelsize": 8,
-            "ytick.labelsize": 8,
-            "legend.fontsize": 8,
-            "figure.dpi": 120,
-            "savefig.dpi": 300,
-            "axes.linewidth": 0.8,
-            "axes.grid": False,
-            "axes.unicode_minus": False,
-        }
-    )
+    apply_publication_style()
 
 
 def style_axis(ax: plt.Axes) -> None:
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(direction="out", length=3, width=0.8)
+    publication_style_axes(ax)
 
 
 def load_labeled_csv(path: Path) -> tuple[pd.DataFrame, np.ndarray, np.ndarray, list[str]]:
@@ -304,15 +291,15 @@ def save_bar_plot(summary: pd.DataFrame, output_path: Path) -> None:
     x = np.arange(len(models))
     width = 0.35
 
-    fig, ax = plt.subplots(figsize=(4.8, 3.4))
+    fig, ax = plt.subplots(figsize=(4.1, 3.0))
     ax.bar(
         x - width / 2,
         summary["accuracy_mean"],
         width,
         yerr=summary["accuracy_std"],
-        color="#9ecae1",
-        edgecolor="black",
-        linewidth=0.6,
+        color=PALETTE["sky"],
+        edgecolor="white",
+        linewidth=0.4,
         capsize=3,
         label="Accuracy",
     )
@@ -321,9 +308,9 @@ def save_bar_plot(summary: pd.DataFrame, output_path: Path) -> None:
         summary["auc_mean"],
         width,
         yerr=summary["auc_std"],
-        color="#3182bd",
-        edgecolor="black",
-        linewidth=0.6,
+        color=PALETTE["blue"],
+        edgecolor="white",
+        linewidth=0.4,
         capsize=3,
         label="AUC",
     )
@@ -335,19 +322,26 @@ def save_bar_plot(summary: pd.DataFrame, output_path: Path) -> None:
     ax.legend(frameon=False)
     style_axis(ax)
     fig.tight_layout()
-    fig.savefig(output_path, bbox_inches="tight")
+    finalize_figure(fig, output_path)
     plt.close(fig)
 
 
 def save_stage_plot(summary: pd.DataFrame, metric: str, output_path: Path) -> None:
-    fig, ax = plt.subplots(figsize=(5.6, 3.4))
-    for model_name, group in summary.groupby("model"):
+    fig, ax = plt.subplots(figsize=(4.8, 3.1))
+    palette = [
+        PALETTE["blue"],
+        PALETTE["orange"],
+        PALETTE["green"],
+        PALETTE["purple"],
+    ]
+    for color, (model_name, group) in zip(palette, summary.groupby("model")):
         group = group.sort_values("stage_order")
         ax.errorbar(
             group["stage"],
             group[f"{metric}_mean"],
             yerr=group[f"{metric}_std"],
             marker="o",
+            color=color,
             linewidth=1.0,
             markersize=3,
             capsize=3,
@@ -361,7 +355,7 @@ def save_stage_plot(summary: pd.DataFrame, metric: str, output_path: Path) -> No
     ax.tick_params(axis="x", rotation=25)
     style_axis(ax)
     fig.tight_layout()
-    fig.savefig(output_path, bbox_inches="tight")
+    finalize_figure(fig, output_path)
     plt.close(fig)
 
 

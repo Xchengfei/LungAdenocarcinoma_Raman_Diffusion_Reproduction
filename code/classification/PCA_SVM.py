@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -19,6 +20,17 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from utils.publication_figures import (
+    CLASS_PALETTE,
+    PALETTE,
+    apply_publication_style,
+    finalize_figure,
+    style_axes as publication_style_axes,
+    style_colorbar,
+)
 
 
 LABEL_COLUMN = "label"
@@ -42,29 +54,11 @@ def project_root() -> Path:
 
 
 def configure_plot_style() -> None:
-    plt.rcParams.update(
-        {
-            "font.family": "serif",
-            "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
-            "font.size": 9,
-            "axes.titlesize": 10,
-            "axes.labelsize": 9,
-            "xtick.labelsize": 8,
-            "ytick.labelsize": 8,
-            "legend.fontsize": 8,
-            "figure.dpi": 120,
-            "savefig.dpi": 300,
-            "axes.linewidth": 0.8,
-            "axes.grid": False,
-            "axes.unicode_minus": False,
-        }
-    )
+    apply_publication_style()
 
 
 def style_axis(ax: plt.Axes) -> None:
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(direction="out", length=3, width=0.8)
+    publication_style_axes(ax)
 
 
 def load_split(split_dir: Path, split_name: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
@@ -197,8 +191,8 @@ def save_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, output_path: P
     matrix = confusion_matrix(y_true, y_pred, labels=[0, 1])
     normalized = matrix / matrix.sum(axis=1, keepdims=True)
 
-    fig, ax = plt.subplots(figsize=(3.6, 3.2))
-    image = ax.imshow(normalized, cmap="Blues", vmin=0, vmax=1)
+    fig, ax = plt.subplots(figsize=(3.35, 3.0))
+    image = ax.imshow(normalized, cmap="YlGnBu", vmin=0, vmax=1)
     ax.set_xticks(np.arange(len(CLASS_NAMES)))
     ax.set_yticks(np.arange(len(CLASS_NAMES)))
     ax.set_xticklabels(CLASS_NAMES, rotation=30, ha="right")
@@ -223,8 +217,9 @@ def save_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, output_path: P
 
     colorbar = fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
     colorbar.set_label("Proportion")
+    style_colorbar(colorbar)
     fig.tight_layout()
-    fig.savefig(output_path, bbox_inches="tight")
+    finalize_figure(fig, output_path)
     plt.close(fig)
 
 
@@ -232,9 +227,9 @@ def save_roc_curve(y_true: np.ndarray, y_prob: np.ndarray, output_path: Path) ->
     fpr, tpr, _ = roc_curve(y_true, y_prob)
     roc_auc = auc(fpr, tpr)
 
-    fig, ax = plt.subplots(figsize=(3.6, 3.2))
-    ax.plot(fpr, tpr, color="black", linewidth=1.2, label=f"AUC = {roc_auc:.3f}")
-    ax.plot([0, 1], [0, 1], color="0.6", linewidth=0.8, linestyle="--")
+    fig, ax = plt.subplots(figsize=(3.35, 3.0))
+    ax.plot(fpr, tpr, color=PALETTE["blue"], linewidth=1.15, label=f"AUC = {roc_auc:.3f}")
+    ax.plot([0, 1], [0, 1], color=PALETTE["gray"], linewidth=0.75, linestyle="--")
     ax.set_xlabel("False positive rate")
     ax.set_ylabel("True positive rate")
     ax.set_title("PCA-SVM ROC curve (test set)", pad=6)
@@ -243,7 +238,7 @@ def save_roc_curve(y_true: np.ndarray, y_prob: np.ndarray, output_path: Path) ->
     ax.legend(frameon=False, loc="lower right")
     style_axis(ax)
     fig.tight_layout()
-    fig.savefig(output_path, bbox_inches="tight")
+    finalize_figure(fig, output_path)
     plt.close(fig)
 
 
@@ -252,34 +247,34 @@ def save_probability_distribution(
     y_prob: np.ndarray,
     output_path: Path,
 ) -> None:
-    fig, ax = plt.subplots(figsize=(4.2, 3.2))
+    fig, ax = plt.subplots(figsize=(3.7, 3.0))
     bins = np.linspace(0.0, 1.0, 12)
     ax.hist(
         y_prob[y_true == 0],
         bins=bins,
-        color="white",
-        edgecolor="black",
-        linewidth=0.8,
-        alpha=1.0,
+        color=CLASS_PALETTE["healthy"],
+        edgecolor="white",
+        linewidth=0.45,
+        alpha=0.72,
         label="Healthy",
     )
     ax.hist(
         y_prob[y_true == 1],
         bins=bins,
-        color="0.65",
-        edgecolor="black",
-        linewidth=0.8,
-        alpha=0.9,
+        color=CLASS_PALETTE["lung_adenocarcinoma"],
+        edgecolor="white",
+        linewidth=0.45,
+        alpha=0.72,
         label="Lung adenocarcinoma",
     )
-    ax.axvline(0.5, color="black", linewidth=0.8, linestyle="--", label="Decision threshold")
+    ax.axvline(0.5, color=PALETTE["black"], linewidth=0.75, linestyle="--", label="Decision threshold")
     ax.set_xlabel(f"Predicted probability of {POSITIVE_CLASS_LABEL}")
     ax.set_ylabel("Number of spectra")
     ax.set_title("PCA-SVM probability distribution (test set)", pad=6)
     ax.legend(frameon=False)
     style_axis(ax)
     fig.tight_layout()
-    fig.savefig(output_path, bbox_inches="tight")
+    finalize_figure(fig, output_path)
     plt.close(fig)
 
 
@@ -295,7 +290,7 @@ def save_pca_predictions(
     coords = pca.transform(scaler.transform(x_test))[:, :2]
     correct = y_true == y_pred
 
-    fig, ax = plt.subplots(figsize=(4.0, 3.4))
+    fig, ax = plt.subplots(figsize=(3.7, 3.1))
     markers = {0: "o", 1: "s"}
     for class_id, class_name in enumerate(CLASS_NAMES):
         for is_correct, line_width, suffix in [
@@ -310,8 +305,8 @@ def save_pca_predictions(
                     coords[mask, 0],
                     coords[mask, 1],
                     marker=markers[class_id],
-                    facecolors="white" if class_id == 0 else "0.65",
-                    edgecolors="black",
+                    facecolors="white",
+                    edgecolors=CLASS_PALETTE["healthy"] if class_id == 0 else CLASS_PALETTE["lung_adenocarcinoma"],
                     linewidths=line_width,
                     s=42,
                     label=f"{class_name}, {suffix}",
@@ -321,7 +316,7 @@ def save_pca_predictions(
                     coords[mask, 0],
                     coords[mask, 1],
                     marker="x",
-                    c="black",
+                    c=PALETTE["black"],
                     linewidths=line_width,
                     s=42,
                     label=f"{class_name}, {suffix}",
@@ -334,7 +329,7 @@ def save_pca_predictions(
     ax.legend(frameon=False, loc="best")
     style_axis(ax)
     fig.tight_layout()
-    fig.savefig(output_path, bbox_inches="tight")
+    finalize_figure(fig, output_path)
     plt.close(fig)
 
 
@@ -345,11 +340,11 @@ def save_validation_curve(grid_results: pd.DataFrame, output_path: Path) -> None
         .sort_values("pca_components")
     )
 
-    fig, ax = plt.subplots(figsize=(4.2, 3.2))
+    fig, ax = plt.subplots(figsize=(3.7, 3.0))
     ax.plot(
         summary["pca_components"],
         summary["val_auc_max"],
-        color="black",
+        color=PALETTE["blue"],
         marker="o",
         linewidth=1.0,
         markersize=3,
@@ -358,7 +353,7 @@ def save_validation_curve(grid_results: pd.DataFrame, output_path: Path) -> None
     ax.plot(
         summary["pca_components"],
         summary["val_auc_mean"],
-        color="0.55",
+        color=PALETTE["orange"],
         marker="s",
         linewidth=0.8,
         markersize=3,
@@ -370,7 +365,7 @@ def save_validation_curve(grid_results: pd.DataFrame, output_path: Path) -> None
     ax.legend(frameon=False)
     style_axis(ax)
     fig.tight_layout()
-    fig.savefig(output_path, bbox_inches="tight")
+    finalize_figure(fig, output_path)
     plt.close(fig)
 
 

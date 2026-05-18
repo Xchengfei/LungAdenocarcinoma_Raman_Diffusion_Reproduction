@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from data.prepare_data import feature_columns
 from utils.config import project_root
+from utils.publication_figures import PALETTE, apply_publication_style, finalize_figure, style_axes
 
 
 def nearest_pearson(real: np.ndarray, generated: np.ndarray) -> float:
@@ -67,20 +68,20 @@ def plot_mean_spectra(split_dir: Path, generated_dir: Path, figure_dir: Path) ->
     x_axis = np.array([float(column) for column in columns])
     for path in sorted(generated_dir.glob("raman_generated_*x.csv")):
         generated_df = pd.read_csv(path)
-        fig, axes = plt.subplots(1, 2, figsize=(14, 5), sharey=True)
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.8), sharey=True)
         for ax, label in zip(axes, sorted(train_df["label"].unique())):
             real = train_df[train_df["label"] == label][columns].to_numpy(dtype=float)
             gen = generated_df[generated_df["label"] == label][columns].to_numpy(dtype=float)
-            ax.plot(x_axis, real.mean(axis=0), label="real train", linewidth=1.2)
+            ax.plot(x_axis, real.mean(axis=0), label="Real train", color=PALETTE["blue"], linewidth=1.0)
             if len(gen):
-                ax.plot(x_axis, gen.mean(axis=0), label="generated", linewidth=1.2)
+                ax.plot(x_axis, gen.mean(axis=0), label="Generated", color=PALETTE["orange"], linewidth=1.0)
             ax.set_title(label)
-            ax.set_xlabel("Wavenumber")
-            ax.grid(alpha=0.2)
-            ax.legend()
+            ax.set_xlabel("Raman shift (cm$^{-1}$)")
+            ax.legend(frameon=False)
+            style_axes(ax, grid=True)
         axes[0].set_ylabel("Normalized intensity")
         fig.tight_layout()
-        fig.savefig(figure_dir / f"{path.stem}_mean_spectra.png", dpi=150)
+        finalize_figure(fig, figure_dir / f"{path.stem}_mean_spectra.png")
         plt.close(fig)
 
 
@@ -95,16 +96,18 @@ def plot_pca(split_dir: Path, generated_dir: Path, figure_dir: Path) -> None:
         coords = PCA(n_components=2, random_state=42).fit_transform(data)
         source = np.array(["real"] * len(real) + ["generated"] * len(gen))
         labels = pd.concat([train_df["label"], generated_df["label"]], ignore_index=True)
-        fig, ax = plt.subplots(figsize=(7, 6))
+        fig, ax = plt.subplots(figsize=(3.4, 3.0))
+        palette = {"real": PALETTE["blue"], "generated": PALETTE["orange"]}
         for src in ["real", "generated"]:
             mask = source == src
-            ax.scatter(coords[mask, 0], coords[mask, 1], s=18, alpha=0.7, label=src)
+            ax.scatter(coords[mask, 0], coords[mask, 1], s=14, alpha=0.72, color=palette[src], edgecolors="none", label=src)
         ax.set_title(f"PCA distribution: {path.stem}")
         ax.set_xlabel("PC1")
         ax.set_ylabel("PC2")
-        ax.legend()
+        ax.legend(frameon=False)
+        style_axes(ax)
         fig.tight_layout()
-        fig.savefig(figure_dir / f"{path.stem}_pca.png", dpi=150)
+        finalize_figure(fig, figure_dir / f"{path.stem}_pca.png")
         plt.close(fig)
 
 
@@ -132,6 +135,7 @@ def write_markdown_report(report_dir: Path) -> Path:
 
 
 def make_report() -> dict[str, object]:
+    apply_publication_style()
     root = project_root()
     split_dir = root / "data" / "splits"
     generated_dir = root / "outputs" / "generated"
